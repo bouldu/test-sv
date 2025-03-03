@@ -1,7 +1,7 @@
 <script lang="ts">
 	import * as THREE from 'three';
 	import { onMount } from 'svelte';
-	import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
+	import { MapControls } from 'three/examples/jsm/Addons.js';
 
 	let canvas: HTMLCanvasElement;
 	let scene: THREE.Scene;
@@ -28,7 +28,8 @@
 		renderer.setClearColor(0xffffff);
 
 		// Contrôles de la caméra
-		controls = new OrbitControls(camera, renderer.domElement);
+		controls = new MapControls(camera, renderer.domElement);
+		controls.screenSpacePanning = true;
 
 		// Création des nœuds (sphères)
 		const nodes = [
