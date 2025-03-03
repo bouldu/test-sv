@@ -7,7 +7,7 @@
 	let scene: THREE.Scene;
 	let camera: THREE.PerspectiveCamera;
 	let renderer: THREE.WebGLRenderer;
-	let controls: OrbitControls;
+	let controls: MapControls;
 
 	onMount(() => {
 		init();
