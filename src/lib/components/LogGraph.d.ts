@@ -1,5 +1,7 @@
 export interface LogNode {
 	id: string;
+	x: number;
+	y: number;
 }
 
 export interface LogEdge {

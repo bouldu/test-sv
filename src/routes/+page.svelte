@@ -5,21 +5,37 @@
 	import LogUploader from '$lib/components/LogUploader.svelte';
 	import type { LogEntry } from '$lib/components/LogUploader';
 	import { convertLogEntriesToGraph } from '$lib/utils/LogUtils';
+	import { createDagreeGraphLayout } from '$lib/utils/GraphLayout';
+	import type { LogEdge, LogNode } from '$lib/components/LogGraph';
 
 	let canvas: HTMLCanvasElement;
 	let scene: THREE.Scene;
-	let camera: THREE.PerspectiveCamera;
+	let camera: THREE.OrthographicCamera;
 	let renderer: THREE.WebGLRenderer;
 	let controls: MapControls;
 	let labelRenderer: CSS2DRenderer;
 
+	let nodeWidth = 100;
+	let nodeHeight = 50;
+	let nodes: LogNode[] = [];
+	let edges: LogEdge[] = [];
+
+	let nodeById: { [key: string]: LogNode } = $derived.by(() => {
+		const result: { [key: string]: LogNode } = {};
+		for (const node of nodes) {
+			result[node.id] = node;
+		}
+		return result;
+	});
+
 	onMount(() => {
 		init();
+		drawGraph();
 		animate();
 	});
 
 	onDestroy(() => {
-		if (labelRenderer && labelRenderer.domElement) {
+		if (labelRenderer?.domElement) {
 			document.body.removeChild(labelRenderer.domElement);
 		}
 	});
@@ -29,7 +45,12 @@
 		scene = new THREE.Scene();
 
 		// Caméra
-		camera = new THREE.PerspectiveCamera(30, window.innerWidth / window.innerHeight, 0.1, 1000);
+		// camera = new THREE.PerspectiveCamera(50, window.innerWidth / window.innerHeight, 0.1, 2000);
+		let minX = -1000;
+		let minY = -1000;
+		let maxX = 1000;
+		let maxY = 1000;
+		camera = new THREE.OrthographicCamera(minX, maxX, maxY, minY, 1, 1000);
 		camera.position.z = 5;
 
 		// Rendu
@@ -50,54 +71,8 @@
 
 		document.body.appendChild(labelRenderer.domElement);
 
-		// Création des nœuds (sphères)
-		const nodes = [
-			{ x: -1, y: 1, z: 0, label: 'Create' },
-			{ x: 1, y: 1, z: 0, label: 'Received' },
-			{ x: 0, y: 0, z: 0, label: 'Delivered' },
-			{ x: 1, y: 0, z: 0, label: 'Returned' },
-			{ x: -1, y: 0, z: 0, label: 'Cancelled' },
-			{ x: 0, y: -1, z: 0, label: 'Refunded' }
-		];
-
-		nodes.forEach((node) => {
-			const geometry = new THREE.BoxGeometry(0.2, 0.1, 0);
-			const material = new THREE.MeshBasicMaterial({ color: 0x00ff00 });
-			const rectangle = new THREE.Mesh(geometry, material);
-			rectangle.position.set(node.x, node.y, node.z);
-			rectangle.name = `nodeLabel-${rectangle.uuid}`;
-			scene.add(rectangle);
-			addNodeLabel(rectangle, node.label);
-		});
-
-		// Création des arêtes (lignes)
-		const edges = [
-			{ from: 0, to: 1 },
-			{ from: 1, to: 2 },
-			{ from: 2, to: 0 },
-			{ from: 1, to: 3 },
-			{ from: 0, to: 4 },
-			{ from: 3, to: 5 }
-		];
-
-		edges.forEach((edge) => {
-			const startNode = nodes[edge.from];
-			const endNode = nodes[edge.to];
-
-			const points = [
-				new THREE.Vector3(startNode.x, startNode.y, startNode.z),
-				new THREE.Vector3(endNode.x, endNode.y, endNode.z)
-			];
-
-			const geometry = new THREE.BufferGeometry().setFromPoints(points);
-			const material = new THREE.LineBasicMaterial({ color: 0xff0000 });
-			const line = new THREE.Line(geometry, material);
-			scene.add(line);
-		});
-
 		// Gestion du redimensionnement de la fenêtre
 		window.addEventListener('resize', () => {
-			camera.aspect = window.innerWidth / window.innerHeight;
 			camera.updateProjectionMatrix();
 			renderer.setSize(window.innerWidth, window.innerHeight);
 		});
@@ -119,9 +94,62 @@
 		node.add(label);
 	}
 
+	function drawGraph() {
+		if (!nodes.length) {
+			return;
+		}
+
+		nodes.forEach((node) => {
+			const geometry = new THREE.BoxGeometry(nodeWidth, nodeHeight, 0);
+			const material = new THREE.MeshBasicMaterial({ color: 0x00ff00 });
+			const rectangle = new THREE.Mesh(geometry, material);
+
+			rectangle.position.set(node.x, node.y, 0);
+			rectangle.name = node.id;
+			scene.add(rectangle);
+			addNodeLabel(rectangle, node.id);
+		});
+
+		let minX = Infinity,
+			minY = Infinity,
+			maxX = -Infinity,
+			maxY = -Infinity;
+		nodes.forEach((node) => {
+			minX = Math.min(minX, node.x);
+			minY = Math.min(minY, node.y);
+			maxX = Math.max(maxX, node.x);
+			maxY = Math.max(maxY, node.y);
+		});
+
+		// Ajouter une marge
+		const margin = 50;
+		minX -= margin;
+		minY -= margin;
+		maxX += margin;
+		maxY += margin;
+
+		console.log('minX', minX, 'minY', minY, 'maxX', maxX, 'maxY', maxY);
+
+		edges.forEach((edge) => {
+			const startNode = nodeById[edge.from];
+			const endNode = nodeById[edge.to];
+			const points = [
+				new THREE.Vector3(startNode.x, startNode.y, 0),
+				new THREE.Vector3(endNode.x, endNode.y, 0)
+			];
+
+			const geometry = new THREE.BufferGeometry().setFromPoints(points);
+			const material = new THREE.LineBasicMaterial({ color: 0xff0000 });
+			const line = new THREE.Line(geometry, material);
+			scene.add(line);
+		});
+		// print draw number of nodes and edges
+		console.log('drawGraph', nodes.length, edges.length);
+	}
+
 	function animate() {
 		requestAnimationFrame(animate);
-		controls.update(); // Mettre à jour les contrôles de la caméra
+		controls.update();
 		renderer.render(scene, camera);
 		labelRenderer.render(scene, camera);
 	}
@@ -131,9 +159,15 @@
 		logs = event.detail;
 		console.log('Logs structurés :', logs);
 
-		const { nodes, edges } = convertLogEntriesToGraph(logs);
-		console.log('nodes', nodes);
-		console.log('edges', edges);
+		const graph = convertLogEntriesToGraph(logs);
+
+		const graphLayout = createDagreeGraphLayout(graph.nodes, graph.edges, nodeWidth, nodeHeight);
+
+		nodes = graphLayout.nodes;
+		edges = graphLayout.edges;
+
+		drawGraph();
+		animate();
 	}
 </script>
 
