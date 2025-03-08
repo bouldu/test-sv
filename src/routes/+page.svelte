@@ -2,6 +2,9 @@
 	import * as THREE from 'three';
 	import { onDestroy, onMount } from 'svelte';
 	import { CSS2DObject, CSS2DRenderer, MapControls } from 'three/examples/jsm/Addons.js';
+	import LogUploader from '$lib/components/LogUploader.svelte';
+	import type { LogEntry } from '$lib/components/LogUploader';
+	import { convertLogEntriesToGraph } from '$lib/utils/LogUtils';
 
 	let canvas: HTMLCanvasElement;
 	let scene: THREE.Scene;
@@ -122,9 +125,20 @@
 		renderer.render(scene, camera);
 		labelRenderer.render(scene, camera);
 	}
+
+	let logs: LogEntry[] = [];
+	function handleLogsUploaded(event: CustomEvent<LogEntry[]>) {
+		logs = event.detail;
+		console.log('Logs structurés :', logs);
+
+		const { nodes, edges } = convertLogEntriesToGraph(logs);
+		console.log('nodes', nodes);
+		console.log('edges', edges);
+	}
 </script>
 
 <!-- <div style="position: relative;"> -->
+<LogUploader on:logsUploaded={handleLogsUploaded} />
 <canvas id="myCanvas" bind:this={canvas}></canvas>
 
 <!-- </div> -->
