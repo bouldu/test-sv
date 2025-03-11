@@ -7,6 +7,7 @@
 	import { convertLogEntriesToGraph } from '$lib/utils/LogUtils';
 	import { createDagreeGraphLayout } from '$lib/utils/GraphLayout';
 	import type { LogEdge, LogNode } from '$lib/components/LogGraph';
+	import type { GUI } from 'dat.gui';
 
 	let canvas: HTMLCanvasElement;
 	let scene: THREE.Scene;
@@ -14,6 +15,7 @@
 	let renderer: THREE.WebGLRenderer;
 	let controls: MapControls;
 	let labelRenderer: CSS2DRenderer;
+	let Gui: GUI;
 
 	let nodeWidth = 100;
 	let nodeHeight = 50;
@@ -38,9 +40,10 @@
 		if (labelRenderer?.domElement) {
 			document.body.removeChild(labelRenderer.domElement);
 		}
+		Gui?.destroy();
 	});
 
-	function init() {
+	const init = async () => {
 		// Scène
 		scene = new THREE.Scene();
 
@@ -51,7 +54,7 @@
 		let maxX = 1000;
 		let maxY = 1000;
 		camera = new THREE.OrthographicCamera(minX, maxX, maxY, minY, 1, 1000);
-		camera.position.z = 5;
+		camera.position.set(0, 0, 5);
 
 		// Rendu
 		renderer = new THREE.WebGLRenderer({ canvas });
@@ -59,8 +62,7 @@
 		renderer.setClearColor(0xffffff);
 
 		// Contrôles de la caméra
-		controls = new MapControls(camera, renderer.domElement);
-		controls.screenSpacePanning = true;
+		createControls();
 
 		labelRenderer = new CSS2DRenderer();
 		labelRenderer.setSize(window.innerWidth, window.innerHeight);
@@ -71,11 +73,29 @@
 
 		document.body.appendChild(labelRenderer.domElement);
 
+		const dat = await import('dat.gui');
+		Gui = new dat.GUI();
+
+		const cameraFolder = Gui.addFolder('Camera');
+		cameraFolder.add(camera.position, 'x', -1000, 1000).name('X').listen();
+		cameraFolder.add(camera.position, 'y', -1000, 1000).name('Y').listen();
+		cameraFolder.add(camera.position, 'z', -1000, 1000).name('Z').listen();
+		cameraFolder.add(camera.rotation, 'x', -Math.PI, Math.PI).name('Rotation X').listen();
+		cameraFolder.add(camera.rotation, 'y', -Math.PI, Math.PI).name('Rotation Y').listen();
+		cameraFolder.add(camera.rotation, 'z', -Math.PI, Math.PI).name('Rotation Z').listen();
+		cameraFolder.open();
+
 		// Gestion du redimensionnement de la fenêtre
 		window.addEventListener('resize', () => {
 			camera.updateProjectionMatrix();
 			renderer.setSize(window.innerWidth, window.innerHeight);
 		});
+	};
+
+	function createControls() {
+		controls = new MapControls(camera, renderer.domElement);
+		controls.screenSpacePanning = true;
+		controls.enableRotate = false;
 	}
 
 	function addNodeLabel(node: THREE.Mesh, text: string) {
@@ -93,6 +113,27 @@
 		const label = new CSS2DObject(divLabel);
 		node.add(label);
 	}
+
+	const center = () => {
+		let minX = Infinity,
+			minY = Infinity,
+			maxX = -Infinity,
+			maxY = -Infinity;
+
+		for (const node of nodes) {
+			minX = Math.min(minX, node.x);
+			minY = Math.min(minY, node.y);
+			maxX = Math.max(maxX, node.x);
+			maxY = Math.max(maxY, node.y);
+		}
+
+		const centerX = (minX + maxX) / 2;
+		const centerY = (minY + maxY) / 2;
+
+		camera.position.set(centerX, centerY, 5);
+		controls.target.set(centerX, centerY, 5);
+		controls.update();
+	};
 
 	function drawGraph() {
 		if (!nodes.length) {
@@ -149,7 +190,7 @@
 
 	function animate() {
 		requestAnimationFrame(animate);
-		controls.update();
+		// controls.update();
 		renderer.render(scene, camera);
 		labelRenderer.render(scene, camera);
 	}
@@ -167,6 +208,7 @@
 		edges = graphLayout.edges;
 
 		drawGraph();
+		center();
 		animate();
 	}
 </script>
@@ -174,6 +216,7 @@
 <!-- <div style="position: relative;"> -->
 <LogUploader on:logsUploaded={handleLogsUploaded} />
 <canvas id="myCanvas" bind:this={canvas}></canvas>
+<button id="center-btn" onclick={center}>Center</button>
 
 <!-- </div> -->
 
@@ -181,6 +224,12 @@
 	canvas {
 		width: 100vw;
 		height: 100vh;
+	}
+
+	#center-btn {
+		position: absolute;
+		top: 40px;
+		left: 10px;
 	}
 
 	/* #nodeLabels {
