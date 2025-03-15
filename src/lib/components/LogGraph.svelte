@@ -159,7 +159,7 @@
 			return;
 		}
 
-		nodes.forEach((node) => {
+		for (const node of nodes) {
 			const geometry = new THREE.BoxGeometry(nodeWidth, nodeHeight, 0);
 			const material = new THREE.MeshBasicMaterial({ color: 0x00ff00 });
 			const rectangle = new THREE.Mesh(geometry, material);
@@ -168,29 +168,9 @@
 			rectangle.name = node.id;
 			scene.add(rectangle);
 			addNodeLabel(rectangle, node.id);
-		});
+		}
 
-		let minX = Infinity,
-			minY = Infinity,
-			maxX = -Infinity,
-			maxY = -Infinity;
-		nodes.forEach((node) => {
-			minX = Math.min(minX, node.x);
-			minY = Math.min(minY, node.y);
-			maxX = Math.max(maxX, node.x);
-			maxY = Math.max(maxY, node.y);
-		});
-
-		// Ajouter une marge
-		const margin = 50;
-		minX -= margin;
-		minY -= margin;
-		maxX += margin;
-		maxY += margin;
-
-		console.log('minX', minX, 'minY', minY, 'maxX', maxX, 'maxY', maxY);
-
-		edges.forEach((edge) => {
+		for (let edge of edges) {
 			const startNode = nodeById[edge.from];
 			const endNode = nodeById[edge.to];
 			const points = [
@@ -202,7 +182,7 @@
 			const material = new THREE.LineBasicMaterial({ color: 0xff0000 });
 			const line = new THREE.Line(geometry, material);
 			scene.add(line);
-		});
+		}
 		// print draw number of nodes and edges
 		console.log('drawGraph', nodes.length, edges.length);
 	}
