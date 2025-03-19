@@ -30,6 +30,14 @@
 					eventId: row.event,
 					startDate: new Date(row.startDate)
 				}));
+
+				logs.sort((a, b) => {
+					if (a.unitId < b.unitId) return -1;
+					if (a.unitId > b.unitId) return 1;
+					if (a.startDate < b.startDate) return -1;
+					if (a.startDate > b.startDate) return 1;
+					return 0;
+				});
 				dispatch('logsUploaded', logs);
 			},
 			error: (error: any) => {
