@@ -5,7 +5,7 @@
 		progress: number;
 	}
 
-	let { width = 500, height = 8, progress = 0 }: Props = $props();
+	let { width = 500, height = 8, progress = $bindable(0) }: Props = $props();
 	let setProgress = (newProgress: number) => {
 		progress = Math.min(100, Math.max(0, newProgress));
 	};

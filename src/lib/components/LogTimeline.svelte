@@ -13,7 +13,7 @@
 		height = 8,
 		minDate = new Date('2024-01-01T00:00:00'),
 		maxDate = new Date('2024-12-31T23:59:59'),
-		currentDate = new Date(minDate)
+		currentDate = $bindable(new Date(minDate))
 		// currentDate = $bindable(new Date(minDate))
 	}: Props = $props();
 
@@ -43,16 +43,25 @@
 </div>
 
 <div class="log-timeline">
-	<span class="date left">{formatDate(minDate)}</span>
+	<div class="top-container">
+		<span class="date left">{formatDate(minDate)}</span>
+		<span class="date right">{formatDate(maxDate)}</span>
+	</div>
 	<Timeline bind:progress {width} {height} />
-	<span class="date right">{formatDate(maxDate)}</span>
 </div>
 
 <style>
+	.top-container {
+		display: flex;
+		justify-content: space-between;
+	}
 	.date {
-		color: #fff;
 		font-size: 14px;
 		font-weight: bold;
+		/* background: rgba(0, 0, 0, 0.7);
+		padding: 5px 10px;
+		border-radius: 5px;
+		margin: 5px 0; */
 	}
 
 	.current-date {
