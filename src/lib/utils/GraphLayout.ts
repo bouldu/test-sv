@@ -1,4 +1,4 @@
-import type { LogEdge, LogNode } from '$lib/components/LogGraph';
+import type { LogEdge, LogGraphEdge, LogGraphNode, LogNode } from '$lib/components/LogGraph';
 import Dagre from '@dagrejs/dagre';
 
 export function createDagreeGraphLayout(
@@ -6,7 +6,7 @@ export function createDagreeGraphLayout(
 	edges: LogEdge[],
 	nodeWidth: number,
 	nodeHeight: number
-): { nodes: LogNode[]; edges: LogEdge[] } {
+): { nodes: LogGraphNode[]; edges: LogGraphEdge[] } {
 	const g = new Dagre.graphlib.Graph();
 	g.setDefaultEdgeLabel(() => ({}));
 	g.setGraph({});
@@ -21,11 +21,26 @@ export function createDagreeGraphLayout(
 
 	Dagre.layout(g);
 
+	const newNodes: LogGraphNode[] = [];
 	for (const node of nodes) {
 		const dagreNode = g.node(node.id);
-		node.x = dagreNode.x;
-		node.y = dagreNode.y;
+		if (!dagreNode) {
+			continue;
+		}
+		newNodes.push({ ...node, x: dagreNode.x, y: dagreNode.y });
 	}
 
-	return { nodes, edges };
+	const newEdges: LogGraphEdge[] = [];
+	for (const edge of edges) {
+		const dagreEdge = g.edge(edge.from, edge.to);
+		if (!dagreEdge) {
+			continue;
+		}
+		newEdges.push({ ...edge });
+	}
+
+	return {
+		nodes: newNodes,
+		edges: newEdges
+	};
 }

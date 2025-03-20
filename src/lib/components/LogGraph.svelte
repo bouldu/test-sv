@@ -2,7 +2,7 @@
 	import * as THREE from 'three';
 	import { onDestroy, onMount } from 'svelte';
 	import { CSS2DObject, CSS2DRenderer, MapControls } from 'three/examples/jsm/Addons.js';
-	import type { LogEdge, LogNode } from '$lib/components/LogGraph';
+	import type { LogEdge, LogGraphNode, LogNode } from '$lib/components/LogGraph';
 	import type { GUI } from 'dat.gui';
 	import { createDagreeGraphLayout } from '$lib/utils/GraphLayout';
 
@@ -15,21 +15,26 @@
 	let nodeWidth = 100;
 	let nodeHeight = 50;
 
-	let nodeById: { [key: string]: LogNode } = $derived.by(() => {
-		const result: { [key: string]: LogNode } = {};
-		for (const node of nodes) {
+	const { localNodes, localEdges } = $derived.by(() => {
+		const layout = createDagreeGraphLayout(nodes, edges, nodeWidth, nodeHeight);
+		return {
+			localNodes: layout.nodes,
+			localEdges: layout.edges
+		};
+	});
+
+	let nodeById: { [key: string]: LogGraphNode } = $derived.by(() => {
+		const result: { [key: string]: LogGraphNode } = {};
+		for (const node of localNodes) {
 			result[node.id] = node;
 		}
 		return result;
 	});
 
-	const doLayout = () => {
-		const layout = createDagreeGraphLayout(nodes, edges, nodeWidth, nodeHeight);
-		nodes = layout.nodes;
-	};
-
 	$effect(() => {
-		doLayout();
+		if (!localNodes.length) {
+			return;
+		}
 		refresh();
 	});
 
@@ -40,6 +45,7 @@
 	let controls: MapControls;
 	let labelRenderer: CSS2DRenderer;
 	let Gui: GUI;
+	let circles: THREE.Mesh[] = [];
 
 	onMount(() => {
 		init();
@@ -139,7 +145,7 @@
 			maxX = -Infinity,
 			maxY = -Infinity;
 
-		for (const node of nodes) {
+		for (const node of localNodes) {
 			minX = Math.min(minX, node.x);
 			minY = Math.min(minY, node.y);
 			maxX = Math.max(maxX, node.x);
@@ -155,11 +161,11 @@
 	};
 
 	function drawGraph() {
-		if (!nodes.length) {
+		if (!localNodes.length) {
 			return;
 		}
 
-		for (const node of nodes) {
+		for (const node of localNodes) {
 			const geometry = new THREE.BoxGeometry(nodeWidth, nodeHeight, 0);
 			const material = new THREE.MeshBasicMaterial({ color: 0x00ff00 });
 			const rectangle = new THREE.Mesh(geometry, material);
@@ -170,7 +176,7 @@
 			addNodeLabel(rectangle, node.id);
 		}
 
-		for (let edge of edges) {
+		for (let edge of localEdges) {
 			const startNode = nodeById[edge.from];
 			const endNode = nodeById[edge.to];
 			const points = [
@@ -182,14 +188,42 @@
 			const material = new THREE.LineBasicMaterial({ color: 0xff0000 });
 			const line = new THREE.Line(geometry, material);
 			scene.add(line);
+
+			const curve = new THREE.CatmullRomCurve3(points, false);
+			edge.curve = curve;
+
+			const circle = new THREE.Mesh(
+				new THREE.CircleGeometry(10, 32),
+				new THREE.MeshBasicMaterial({ color: 0xffff00 })
+			);
+			circles.push(circle);
+			scene.add(circle);
 		}
 		// print draw number of nodes and edges
-		console.log('drawGraph', nodes.length, edges.length);
+		console.log('drawGraph', localNodes.length, edges.length);
 	}
 
+	let t = 0;
+	let speed = 0.002;
 	function animate() {
 		requestAnimationFrame(animate);
 		// controls.update();
+
+		for (let circle of circles) {
+			const edge = localEdges[circles.indexOf(circle)];
+			if (!edge) {
+				continue;
+			}
+			const curve = edge.curve;
+			const position = curve.getPointAt(t);
+			circle.position.copy(position);
+		}
+
+		t += speed;
+		if (t > 1) {
+			t = 0;
+		}
+
 		renderer.render(scene, camera);
 		labelRenderer.render(scene, camera);
 	}
