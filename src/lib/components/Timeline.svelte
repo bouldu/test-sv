@@ -51,6 +51,6 @@
 	.progress {
 		height: 100%;
 		background-color: #1db954;
-		transition: width 0.2s ease-in-out;
+		transition: width 0.1s linear;
 	}
 </style>
