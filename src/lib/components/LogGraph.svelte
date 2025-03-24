@@ -11,17 +11,21 @@
 	} from '$lib/components/LogGraph';
 	import type { GUI } from 'dat.gui';
 	import { createDagreeGraphLayout } from '$lib/utils/GraphLayout';
+	import gsap from 'gsap';
 
 	interface Props {
 		nodes: LogNode[];
 		edges: LogEdge[];
 		units: LogUnit[];
 		currentDate: Date;
+		isPlaying: boolean;
 	}
 
-	let { nodes, edges, units, currentDate }: Props = $props();
+	let { nodes, edges, units, currentDate, isPlaying = false }: Props = $props();
 	let nodeWidth = 100;
 	let nodeHeight = 50;
+
+	let currentSpeed = 1000 * 60 * 60 * 24;
 
 	const { localNodes, localEdges } = $derived.by(() => {
 		const layout = createDagreeGraphLayout(nodes, edges, nodeWidth, nodeHeight);
@@ -50,7 +54,13 @@
 		if (!currentDate) {
 			return;
 		}
-		calculCircles();
+		refreshCircles();
+	});
+
+	$effect(() => {
+		for (let anim of circleAnimations) {
+			anim.paused(!isPlaying);
+		}
 	});
 
 	let canvas: HTMLCanvasElement;
@@ -61,6 +71,8 @@
 	let labelRenderer: CSS2DRenderer;
 	let Gui: GUI;
 	let circles: THREE.Mesh[] = [];
+
+	let circleAnimations: gsap.core.Timeline[] = [];
 
 	onMount(() => {
 		init();
@@ -114,6 +126,7 @@
 		document.body.appendChild(labelRenderer.domElement);
 
 		const dat = await import('dat.gui');
+		Gui?.destroy();
 		Gui = new dat.GUI();
 
 		const cameraFolder = Gui.addFolder('Camera');
@@ -208,6 +221,8 @@
 			edge.curve = curve;
 		}
 
+		createCircles();
+
 		// print draw number of nodes and edges
 		console.log('drawGraph', localNodes.length, edges.length);
 	}
@@ -216,35 +231,6 @@
 	let speed = 0.002;
 	function animate() {
 		requestAnimationFrame(animate);
-		// controls.update();
-
-		// calculCircles();
-
-		// for (let circle of circles) {
-		// 	const unit = circle.userData as LogUnit;
-		// 	let edge = findCurrentEdge(unit);
-		// 	if (!edge?.curve) {
-		// 		continue;
-		// 	}
-
-		// 	const curve = edge.curve;
-		// 	const currentEdgeUnit = findCurrentEdgeUnit(unit);
-
-		// 	if (!currentEdgeUnit) {
-		// 		continue;
-		// 	}
-
-		// 	const totalDuration =
-		// 		currentEdgeUnit.to.startDate.getTime() - currentEdgeUnit.from.startDate.getTime();
-		// 	const elapsedDuration = currentDate.getTime() - currentEdgeUnit.from.startDate.getTime();
-		// 	const progress = elapsedDuration / totalDuration;
-
-		// 	if (!isFinite(progress)) {
-		// 		continue;
-		// 	}
-		// 	const position = curve.getPointAt(progress);
-		// 	circle.position.copy(position);
-		// }
 		renderer.render(scene, camera);
 		labelRenderer.render(scene, camera);
 	}
@@ -322,6 +308,125 @@
 			}
 		}
 		return undefined;
+	}
+
+	// function creatingCircleAnimation() {
+	// 	let circle = new THREE.Mesh(
+	// 		new THREE.CircleGeometry(10, 32),
+	// 		new THREE.MeshBasicMaterial({ color: 0x0000ff })
+	// 	);
+
+	// 	const packedToShip = localEdges.find(
+	// 		(edge) => edge.from === 'Item packed' && edge.to === 'Item shipped'
+	// 	);
+
+	// 	const shippedToProcess = localEdges.find(
+	// 		(edge) => edge.from === 'Item shipped' && edge.to === 'Order processed'
+	// 	);
+
+	// 	if (!packedToShip?.curve || !shippedToProcess?.curve) {
+	// 		return;
+	// 	}
+
+	// 	circle.position.copy(packedToShip.curve.getPointAt(0));
+	// 	scene.add(circle);
+
+	// 	tl = gsap.timeline({ repeat: 0, paused: false, onComplete: () => removeCircle(circle) });
+	// 	tl.to(circle.position, {
+	// 		duration: 3,
+	// 		x: packedToShip.curve.getPointAt(1).x,
+	// 		y: packedToShip.curve.getPointAt(1).y,
+	// 		ease: 'linear'
+	// 	}).to(circle.position, {
+	// 		duration: 3,
+	// 		x: shippedToProcess.curve.getPointAt(1).x,
+	// 		y: shippedToProcess.curve.getPointAt(1).y,
+	// 		ease: 'linear'
+	// 	});
+	// 	// .to(circle.position, {
+	// 	// 	duration: 3,
+	// 	// 	x: packedToShip.curve.getPointAt(1).x,
+	// 	// 	y: packedToShip.curve.getPointAt(1).y,
+	// 	// 	ease: 'linear'
+	// 	// });
+	// }
+
+	function refreshCircles() {
+		for (let circle of circles) {
+			const minDate = circle.userData.events[0].startDate;
+			const maxDate = circle.userData.events[circle.userData.events.length - 1].startDate;
+
+			if (minDate > currentDate || maxDate < currentDate) {
+				circle.visible = false;
+				continue;
+			}
+			circle.visible = true;
+
+			if (isPlaying) {
+				continue;
+			}
+
+			let circleAnimation = circleAnimations.find((anim) => anim.data === circle);
+			if (!circleAnimation) {
+				continue;
+			}
+
+			const progress =
+				(currentDate.getTime() - minDate.getTime()) / (maxDate.getTime() - minDate.getTime());
+
+			circleAnimation.progress(progress);
+		}
+	}
+
+	function createCircles() {
+		circleAnimations = [];
+		for (let unit of units) {
+			if (unit.events.length < 2) {
+				continue;
+			}
+
+			let circle = new THREE.Mesh(
+				new THREE.CircleGeometry(10, 32),
+				new THREE.MeshBasicMaterial({ color: 0x0000ff })
+			);
+			circle.name = unit.id;
+			circle.userData = unit;
+
+			let anim = gsap.timeline({
+				repeat: 0,
+				paused: !isPlaying,
+				data: circle,
+				onComplete: () => {
+					circle.visible = false;
+				}
+			});
+			for (let i = 0; i < unit.events.length - 2; i++) {
+				let from = unit.events[i];
+				let to = unit.events[i + 1];
+
+				const edge = localEdges.find((edge) => edge.from === from.id && edge.to === to.id);
+				if (!edge?.curve) {
+					continue;
+				}
+				if (i === 0) {
+					circle.position.copy(edge.curve.getPointAt(0));
+				}
+
+				let durationMs = to.startDate.getTime() - from.startDate.getTime();
+				let animDuration = durationMs / currentSpeed;
+
+				anim.to(circle.position, {
+					duration: animDuration,
+					x: edge.curve.getPointAt(1).x,
+					y: edge.curve.getPointAt(1).y,
+					ease: 'linear'
+				});
+			}
+
+			circles.push(circle);
+			circleAnimations.push(anim);
+			scene.add(circle);
+		}
 	}
 </script>
 

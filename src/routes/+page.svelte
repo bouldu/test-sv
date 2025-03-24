@@ -29,7 +29,7 @@
 		edges = graph.edges;
 		units = graph.units;
 
-		units = units.filter((unit) => unit.id === '100');
+		units = units.filter((unit) => unit.id === '94');
 		minDate = graph.minDate;
 		maxDate = graph.maxDate;
 	}
@@ -37,7 +37,7 @@
 
 <LogUploader on:logsUploaded={handleLogsUploaded} />
 
-<LogGraph {nodes} {edges} {units} {currentDate} />
+<LogGraph {nodes} {edges} {units} {currentDate} {isPlaying} />
 
 <div class="timeline-container">
 	<LogTimeline bind:currentDate width={600} height={50} {minDate} {maxDate} {onUpdateIsPlaying} />
