@@ -16,6 +16,11 @@ export interface LogUnit {
 	events: LogEvent[];
 }
 
+export interface LogEdgeUnit {
+	from: LogEvent;
+	to: LogEvent;
+}
+
 export interface LogGraphNode extends LogNode {
 	x: number;
 	y: number;

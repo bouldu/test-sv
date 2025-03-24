@@ -2,16 +2,24 @@
 	import * as THREE from 'three';
 	import { onDestroy, onMount } from 'svelte';
 	import { CSS2DObject, CSS2DRenderer, MapControls } from 'three/examples/jsm/Addons.js';
-	import type { LogEdge, LogGraphNode, LogNode } from '$lib/components/LogGraph';
+	import type {
+		LogEdge,
+		LogEdgeUnit,
+		LogGraphNode,
+		LogNode,
+		LogUnit
+	} from '$lib/components/LogGraph';
 	import type { GUI } from 'dat.gui';
 	import { createDagreeGraphLayout } from '$lib/utils/GraphLayout';
 
 	interface Props {
 		nodes: LogNode[];
 		edges: LogEdge[];
+		units: LogUnit[];
+		currentDate: Date;
 	}
 
-	let { nodes, edges }: Props = $props();
+	let { nodes, edges, units, currentDate }: Props = $props();
 	let nodeWidth = 100;
 	let nodeHeight = 50;
 
@@ -36,6 +44,13 @@
 			return;
 		}
 		refresh();
+	});
+
+	$effect(() => {
+		if (!currentDate) {
+			return;
+		}
+		calculCircles();
 	});
 
 	let canvas: HTMLCanvasElement;
@@ -191,14 +206,8 @@
 
 			const curve = new THREE.CatmullRomCurve3(points, false);
 			edge.curve = curve;
-
-			const circle = new THREE.Mesh(
-				new THREE.CircleGeometry(10, 32),
-				new THREE.MeshBasicMaterial({ color: 0xffff00 })
-			);
-			circles.push(circle);
-			scene.add(circle);
 		}
+
 		// print draw number of nodes and edges
 		console.log('drawGraph', localNodes.length, edges.length);
 	}
@@ -209,23 +218,110 @@
 		requestAnimationFrame(animate);
 		// controls.update();
 
-		for (let circle of circles) {
-			const edge = localEdges[circles.indexOf(circle)];
-			if (!edge) {
-				continue;
-			}
-			const curve = edge.curve;
-			const position = curve.getPointAt(t);
-			circle.position.copy(position);
-		}
+		// calculCircles();
 
-		t += speed;
-		if (t > 1) {
-			t = 0;
-		}
+		// for (let circle of circles) {
+		// 	const unit = circle.userData as LogUnit;
+		// 	let edge = findCurrentEdge(unit);
+		// 	if (!edge?.curve) {
+		// 		continue;
+		// 	}
 
+		// 	const curve = edge.curve;
+		// 	const currentEdgeUnit = findCurrentEdgeUnit(unit);
+
+		// 	if (!currentEdgeUnit) {
+		// 		continue;
+		// 	}
+
+		// 	const totalDuration =
+		// 		currentEdgeUnit.to.startDate.getTime() - currentEdgeUnit.from.startDate.getTime();
+		// 	const elapsedDuration = currentDate.getTime() - currentEdgeUnit.from.startDate.getTime();
+		// 	const progress = elapsedDuration / totalDuration;
+
+		// 	if (!isFinite(progress)) {
+		// 		continue;
+		// 	}
+		// 	const position = curve.getPointAt(progress);
+		// 	circle.position.copy(position);
+		// }
 		renderer.render(scene, camera);
 		labelRenderer.render(scene, camera);
+	}
+
+	function calculCircles() {
+		for (let unit of units) {
+			let minDate = unit.events[0].startDate;
+			let maxDate = unit.events[unit.events.length - 1].startDate;
+
+			let currentCircle = circles.find((circle) => circle.name === unit.id);
+			if (minDate > currentDate || maxDate < currentDate) {
+				if (currentCircle) {
+					scene.remove(currentCircle);
+					circles = circles.filter((circle) => circle !== currentCircle);
+				}
+				continue;
+			}
+
+			if (currentCircle) {
+				continue;
+			}
+
+			currentCircle = new THREE.Mesh(
+				new THREE.CircleGeometry(10, 32),
+				new THREE.MeshBasicMaterial({ color: 0x0000ff })
+			);
+			currentCircle.name = unit.id;
+			currentCircle.userData = unit;
+
+			const currentEdgeUnit = findCurrentEdgeUnit(unit);
+			if (!currentEdgeUnit) {
+				continue;
+			}
+
+			const edge = localEdges.find(
+				(edge) => edge.from === currentEdgeUnit.from.id && edge.to === currentEdgeUnit.to.id
+			);
+
+			if (!edge?.curve) {
+				continue;
+			}
+
+			const curve = edge.curve;
+
+			const totalDuration =
+				currentEdgeUnit.to.startDate.getTime() - currentEdgeUnit.from.startDate.getTime();
+			const elapsedDuration = currentDate.getTime() - currentEdgeUnit.from.startDate.getTime();
+			const progress = elapsedDuration / totalDuration;
+
+			if (!isFinite(progress)) {
+				continue;
+			}
+			const position = curve.getPointAt(progress);
+			currentCircle.position.copy(position);
+
+			scene.add(currentCircle);
+			circles.push(currentCircle);
+		}
+
+		console.log('calculCircles', circles.length);
+	}
+
+	function findCurrentEdgeUnit(unit: LogUnit): LogEdgeUnit | undefined {
+		for (let i = 0; i < unit.events.length; i++) {
+			if (i === unit.events.length - 1) {
+				return undefined;
+			}
+			const unitEvent = unit.events[i];
+			const nextUnitEvent = unit.events[i + 1];
+			if (unitEvent.startDate < currentDate && nextUnitEvent.startDate > currentDate) {
+				return {
+					from: unitEvent,
+					to: nextUnitEvent
+				};
+			}
+		}
+		return undefined;
 	}
 </script>
 
