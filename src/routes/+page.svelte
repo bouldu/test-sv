@@ -16,6 +16,11 @@
 	let maxDate = $state(new Date('2025-12-31'));
 
 	let currentDate = $state(new Date('2023-01-01'));
+	let isPlaying = $state(false);
+	function onUpdateIsPlaying(playing: boolean) {
+		isPlaying = playing;
+	}
+
 	function handleLogsUploaded(event: CustomEvent<LogEntry[]>) {
 		logs = event.detail;
 
@@ -23,6 +28,8 @@
 		nodes = graph.nodes;
 		edges = graph.edges;
 		units = graph.units;
+
+		units = units.filter((unit) => unit.id === '100');
 		minDate = graph.minDate;
 		maxDate = graph.maxDate;
 	}
@@ -33,7 +40,7 @@
 <LogGraph {nodes} {edges} {units} {currentDate} />
 
 <div class="timeline-container">
-	<LogTimeline bind:currentDate width={600} height={50} {minDate} {maxDate} />
+	<LogTimeline bind:currentDate width={600} height={50} {minDate} {maxDate} {onUpdateIsPlaying} />
 </div>
 
 <style>

@@ -6,6 +6,7 @@
 		minDate: Date;
 		maxDate: Date;
 		currentDate: Date;
+		onUpdateIsPlaying: (playing: boolean) => void;
 	}
 
 	let {
@@ -13,7 +14,8 @@
 		height = 8,
 		minDate = new Date('2024-01-01T00:00:00'),
 		maxDate = new Date('2024-12-31T23:59:59'),
-		currentDate = $bindable(new Date(minDate))
+		currentDate = $bindable(new Date(minDate)),
+		onUpdateIsPlaying
 		// currentDate = $bindable(new Date(minDate))
 	}: Props = $props();
 
@@ -44,11 +46,14 @@
 	function play() {
 		isPlaying = true;
 		animate();
+
+		onUpdateIsPlaying(isPlaying);
 	}
 
 	function pause() {
 		isPlaying = false;
 		cancelAnimationFrame(animationFrame);
+		onUpdateIsPlaying(isPlaying);
 	}
 
 	function reset() {
