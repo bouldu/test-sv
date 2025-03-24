@@ -12,32 +12,28 @@
 
 	let logs: LogEntry[] = [];
 
+	let minDate = $state(new Date('2025-01-01'));
+	let maxDate = $state(new Date('2025-12-31'));
+
 	let currentDate = $state(new Date('2023-01-01'));
 	function handleLogsUploaded(event: CustomEvent<LogEntry[]>) {
 		logs = event.detail;
-		console.log('Logs structurés :', logs);
 
 		const graph = convertLogEntriesToGraph(logs);
 		nodes = graph.nodes;
 		edges = graph.edges;
 		units = graph.units;
-
-		console.log('units', units);
+		minDate = graph.minDate;
+		maxDate = graph.maxDate;
 	}
 </script>
 
 <LogUploader on:logsUploaded={handleLogsUploaded} />
 
-<LogGraph {nodes} {edges} />
+<LogGraph {nodes} {edges} {units} {currentDate} />
 
 <div class="timeline-container">
-	<LogTimeline
-		bind:currentDate
-		width={600}
-		height={50}
-		minDate={new Date('2023-01-01')}
-		maxDate={new Date('2023-12-31')}
-	/>
+	<LogTimeline bind:currentDate width={600} height={50} {minDate} {maxDate} />
 </div>
 
 <style>
