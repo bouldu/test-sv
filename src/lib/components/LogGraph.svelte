@@ -227,70 +227,10 @@
 		console.log('drawGraph', localNodes.length, edges.length);
 	}
 
-	let t = 0;
-	let speed = 0.002;
 	function animate() {
 		requestAnimationFrame(animate);
 		renderer.render(scene, camera);
 		labelRenderer.render(scene, camera);
-	}
-
-	function calculCircles() {
-		for (let unit of units) {
-			let minDate = unit.events[0].startDate;
-			let maxDate = unit.events[unit.events.length - 1].startDate;
-
-			let currentCircle = circles.find((circle) => circle.name === unit.id);
-			if (minDate > currentDate || maxDate < currentDate) {
-				if (currentCircle) {
-					scene.remove(currentCircle);
-					circles = circles.filter((circle) => circle !== currentCircle);
-				}
-				continue;
-			}
-
-			if (currentCircle) {
-				continue;
-			}
-
-			currentCircle = new THREE.Mesh(
-				new THREE.CircleGeometry(10, 32),
-				new THREE.MeshBasicMaterial({ color: 0x0000ff })
-			);
-			currentCircle.name = unit.id;
-			currentCircle.userData = unit;
-
-			const currentEdgeUnit = findCurrentEdgeUnit(unit);
-			if (!currentEdgeUnit) {
-				continue;
-			}
-
-			const edge = localEdges.find(
-				(edge) => edge.from === currentEdgeUnit.from.id && edge.to === currentEdgeUnit.to.id
-			);
-
-			if (!edge?.curve) {
-				continue;
-			}
-
-			const curve = edge.curve;
-
-			const totalDuration =
-				currentEdgeUnit.to.startDate.getTime() - currentEdgeUnit.from.startDate.getTime();
-			const elapsedDuration = currentDate.getTime() - currentEdgeUnit.from.startDate.getTime();
-			const progress = elapsedDuration / totalDuration;
-
-			if (!isFinite(progress)) {
-				continue;
-			}
-			const position = curve.getPointAt(progress);
-			currentCircle.position.copy(position);
-
-			scene.add(currentCircle);
-			circles.push(currentCircle);
-		}
-
-		console.log('calculCircles', circles.length);
 	}
 
 	function findCurrentEdgeUnit(unit: LogUnit): LogEdgeUnit | undefined {
