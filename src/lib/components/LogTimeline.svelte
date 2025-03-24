@@ -20,6 +20,7 @@
 	}: Props = $props();
 
 	let progress = $state(0);
+	let speedUnit = $state(1000 * 60 * 60 * 24); // 1 day per s
 
 	$effect(() => {
 		currentDate = new Date(
@@ -32,21 +33,17 @@
 			((currentDate.getTime() - minDate.getTime()) / (maxDate.getTime() - minDate.getTime())) * 100;
 	});
 
-	// const handleProgressChange = (newProgress: number) => {
-	// 	progress = newProgress;
-	// };
-
 	const formatDate = (date: Date) =>
 		date.toLocaleDateString('fr-FR', { year: 'numeric', month: 'short', day: 'numeric' });
 
 	let isPlaying = $state(false);
 	let animationFrame: number;
-	let speed = 0.1;
+	let lastTimestamp: number | null = null;
 
 	function play() {
 		isPlaying = true;
-		animate();
-
+		lastTimestamp = null; // Reset timestamp when starting
+		animationFrame = requestAnimationFrame(animate);
 		onUpdateIsPlaying(isPlaying);
 	}
 
@@ -61,12 +58,19 @@
 		progress = 0;
 	}
 
-	function animate() {
+	function animate(timestamp: number) {
 		if (!isPlaying) {
 			return;
 		}
 
-		progress = Math.min(100, progress + speed);
+		if (lastTimestamp !== null) {
+			const elapsed = timestamp - lastTimestamp;
+			const progressIncrement =
+				(elapsed / 1000) * (speedUnit / (maxDate.getTime() - minDate.getTime())) * 100;
+			progress = Math.min(100, progress + progressIncrement);
+		}
+
+		lastTimestamp = timestamp;
 		animationFrame = requestAnimationFrame(animate);
 	}
 </script>
