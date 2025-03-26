@@ -73,6 +73,42 @@
 
 	let circleAnimations: gsap.core.Timeline[] = [];
 
+	let raycaster = new THREE.Raycaster();
+	let mouse = new THREE.Vector2();
+	let selectedCircle: THREE.Mesh | undefined = $state(undefined);
+
+	function onResize() {
+		camera.updateProjectionMatrix();
+		renderer.setSize(window.innerWidth, window.innerHeight);
+		labelRenderer.setSize(window.innerWidth, window.innerHeight);
+	}
+
+	function onClick(event: MouseEvent) {
+		event.preventDefault();
+
+		mouse.x = (event.clientX / renderer.domElement.clientWidth) * 2 - 1;
+		mouse.y = -(event.clientY / renderer.domElement.clientHeight) * 2 + 1;
+
+		raycaster.setFromCamera(mouse, camera);
+
+		var intersects = raycaster.intersectObjects(scene.children, true);
+
+		if (intersects.length == 0) {
+			if (selectedCircle) {
+				selectedCircle.material = new THREE.MeshBasicMaterial({ color: 0x0000ff });
+				selectedCircle = undefined;
+			}
+			return;
+		}
+
+		let object = intersects[0].object;
+		// check if the object is a circle
+		if (object.userData?.type === 'circle') {
+			selectedCircle = object as THREE.Mesh;
+			selectedCircle.material = new THREE.MeshBasicMaterial({ color: 0xff0000 });
+		}
+	}
+
 	onMount(() => {
 		init();
 		refresh();
@@ -138,10 +174,9 @@
 		cameraFolder.open();
 
 		// Gestion du redimensionnement de la fenêtre
-		window.addEventListener('resize', () => {
-			camera.updateProjectionMatrix();
-			renderer.setSize(window.innerWidth, window.innerHeight);
-		});
+		window.addEventListener('resize', onResize);
+
+		canvas.addEventListener('click', onClick);
 	};
 
 	function createControls() {
@@ -259,7 +294,6 @@
 	}
 
 	function createCircles() {
-		console.log('createCircles', units.length);
 		circleAnimations = [];
 		for (let unit of units) {
 			if (unit.events.length < 2) {
@@ -271,7 +305,12 @@
 				new THREE.MeshBasicMaterial({ color: 0x0000ff })
 			);
 			circle.name = unit.id;
-			circle.userData = unit;
+			circle.userData = {
+				...unit,
+				type: 'circle'
+			};
+
+			circle.userData;
 
 			let anim = gsap.timeline({
 				repeat: 0,
@@ -311,7 +350,19 @@
 	}
 </script>
 
-<div>{isPlaying ? 'Playing' : 'Paused'}</div>
+{#if selectedCircle}
+	<div class="circle-pophover">
+		<h3>Unit</h3>
+		<p>{selectedCircle.userData?.id}</p>
+		<h3>Events</h3>
+		<ul>
+			{#each selectedCircle.userData?.events as event}
+				<li>{event.id} - {event.startDate.toLocaleString()}</li>
+			{/each}
+		</ul>
+	</div>
+{/if}
+
 <canvas id="myCanvas" bind:this={canvas}></canvas>
 <button id="center-btn" onclick={center}>Center</button>
 
@@ -325,5 +376,14 @@
 		position: absolute;
 		top: 40px;
 		left: 10px;
+	}
+
+	.circle-pophover {
+		position: absolute;
+		top: 150px;
+		left: 10px;
+		background-color: rgba(0, 0, 0, 0.5);
+		padding: 10px;
+		border-radius: 5px;
 	}
 </style>

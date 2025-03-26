@@ -35,7 +35,9 @@
 	}
 </script>
 
-<LogUploader on:logsUploaded={handleLogsUploaded} />
+<div class="upload-container">
+	<LogUploader on:logsUploaded={handleLogsUploaded} />
+</div>
 
 <LogGraph {nodes} {edges} {units} {currentDate} {isPlaying} />
 
@@ -49,5 +51,12 @@
 		left: 50%;
 		transform: translateX(-50%);
 		bottom: 10px;
+	}
+
+	.upload-container {
+		position: fixed;
+		left: 50%;
+		transform: translateX(-50%);
+		top: 10px;
 	}
 </style>
