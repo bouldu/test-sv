@@ -59,7 +59,11 @@
 
 	$effect(() => {
 		for (let anim of circleAnimations) {
-			anim.paused(!isPlaying);
+			if (isPlaying) {
+				anim.play();
+			} else {
+				anim.pause();
+			}
 		}
 	});
 
@@ -223,8 +227,7 @@
 
 		createCircles();
 
-		// print draw number of nodes and edges
-		console.log('drawGraph', localNodes.length, edges.length);
+		// console.log('drawGraph', localNodes.length, edges.length);
 	}
 
 	function animate() {
@@ -232,64 +235,6 @@
 		renderer.render(scene, camera);
 		labelRenderer.render(scene, camera);
 	}
-
-	function findCurrentEdgeUnit(unit: LogUnit): LogEdgeUnit | undefined {
-		for (let i = 0; i < unit.events.length; i++) {
-			if (i === unit.events.length - 1) {
-				return undefined;
-			}
-			const unitEvent = unit.events[i];
-			const nextUnitEvent = unit.events[i + 1];
-			if (unitEvent.startDate < currentDate && nextUnitEvent.startDate > currentDate) {
-				return {
-					from: unitEvent,
-					to: nextUnitEvent
-				};
-			}
-		}
-		return undefined;
-	}
-
-	// function creatingCircleAnimation() {
-	// 	let circle = new THREE.Mesh(
-	// 		new THREE.CircleGeometry(10, 32),
-	// 		new THREE.MeshBasicMaterial({ color: 0x0000ff })
-	// 	);
-
-	// 	const packedToShip = localEdges.find(
-	// 		(edge) => edge.from === 'Item packed' && edge.to === 'Item shipped'
-	// 	);
-
-	// 	const shippedToProcess = localEdges.find(
-	// 		(edge) => edge.from === 'Item shipped' && edge.to === 'Order processed'
-	// 	);
-
-	// 	if (!packedToShip?.curve || !shippedToProcess?.curve) {
-	// 		return;
-	// 	}
-
-	// 	circle.position.copy(packedToShip.curve.getPointAt(0));
-	// 	scene.add(circle);
-
-	// 	tl = gsap.timeline({ repeat: 0, paused: false, onComplete: () => removeCircle(circle) });
-	// 	tl.to(circle.position, {
-	// 		duration: 3,
-	// 		x: packedToShip.curve.getPointAt(1).x,
-	// 		y: packedToShip.curve.getPointAt(1).y,
-	// 		ease: 'linear'
-	// 	}).to(circle.position, {
-	// 		duration: 3,
-	// 		x: shippedToProcess.curve.getPointAt(1).x,
-	// 		y: shippedToProcess.curve.getPointAt(1).y,
-	// 		ease: 'linear'
-	// 	});
-	// 	// .to(circle.position, {
-	// 	// 	duration: 3,
-	// 	// 	x: packedToShip.curve.getPointAt(1).x,
-	// 	// 	y: packedToShip.curve.getPointAt(1).y,
-	// 	// 	ease: 'linear'
-	// 	// });
-	// }
 
 	function refreshCircles() {
 		for (let circle of circles) {
@@ -319,6 +264,7 @@
 	}
 
 	function createCircles() {
+		console.log('createCircles', units.length);
 		circleAnimations = [];
 		for (let unit of units) {
 			if (unit.events.length < 2) {
@@ -334,7 +280,7 @@
 
 			let anim = gsap.timeline({
 				repeat: 0,
-				paused: !isPlaying,
+				paused: true,
 				data: circle,
 				onComplete: () => {
 					circle.visible = false;
@@ -370,6 +316,7 @@
 	}
 </script>
 
+<div>{isPlaying ? 'Playing' : 'Paused'}</div>
 <canvas id="myCanvas" bind:this={canvas}></canvas>
 <button id="center-btn" onclick={center}>Center</button>
 
