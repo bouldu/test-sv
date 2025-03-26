@@ -2,13 +2,7 @@
 	import * as THREE from 'three';
 	import { onDestroy, onMount } from 'svelte';
 	import { CSS2DObject, CSS2DRenderer, MapControls } from 'three/examples/jsm/Addons.js';
-	import type {
-		LogEdge,
-		LogEdgeUnit,
-		LogGraphNode,
-		LogNode,
-		LogUnit
-	} from '$lib/components/LogGraph';
+	import type { LogEdge, LogGraphNode, LogNode, LogUnit } from '$lib/components/LogGraph';
 	import type { GUI } from 'dat.gui';
 	import { createDagreeGraphLayout } from '$lib/utils/GraphLayout';
 	import gsap from 'gsap';
@@ -58,6 +52,7 @@
 	});
 
 	$effect(() => {
+		console.log('isPlaying', isPlaying);
 		for (let anim of circleAnimations) {
 			if (isPlaying) {
 				anim.play();

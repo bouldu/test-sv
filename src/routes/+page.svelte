@@ -29,7 +29,7 @@
 		edges = graph.edges;
 		units = graph.units;
 
-		units = units.filter((unit) => unit.id === '94');
+		// units = units.filter((unit) => unit.id === '94');
 		minDate = graph.minDate;
 		maxDate = graph.maxDate;
 	}
