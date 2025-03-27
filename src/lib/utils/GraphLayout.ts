@@ -1,5 +1,5 @@
-import type { LogEdge, LogGraphEdge, LogGraphNode, LogNode } from '$lib/components/LogGraph';
-import Dagre from '@dagrejs/dagre';
+import type { LogEdge, LogGraphEdge, LogGraphNode, LogNode } from '$lib/components/LogGraph'
+import Dagre from '@dagrejs/dagre'
 
 export function createDagreeGraphLayout(
 	nodes: LogNode[],
@@ -7,40 +7,40 @@ export function createDagreeGraphLayout(
 	nodeWidth: number,
 	nodeHeight: number
 ): { nodes: LogGraphNode[]; edges: LogGraphEdge[] } {
-	const g = new Dagre.graphlib.Graph();
-	g.setDefaultEdgeLabel(() => ({}));
-	g.setGraph({});
+	const g = new Dagre.graphlib.Graph()
+	g.setDefaultEdgeLabel(() => ({}))
+	g.setGraph({})
 
 	for (const node of nodes) {
-		g.setNode(node.id, { label: node.id, width: nodeWidth, height: nodeHeight });
+		g.setNode(node.id, { label: node.id, width: nodeWidth, height: nodeHeight })
 	}
 
 	for (const edge of edges) {
-		g.setEdge(edge.from, edge.to);
+		g.setEdge(edge.from, edge.to)
 	}
 
-	Dagre.layout(g);
+	Dagre.layout(g)
 
-	const newNodes: LogGraphNode[] = [];
+	const newNodes: LogGraphNode[] = []
 	for (const node of nodes) {
-		const dagreNode = g.node(node.id);
+		const dagreNode = g.node(node.id)
 		if (!dagreNode) {
-			continue;
+			continue
 		}
-		newNodes.push({ ...node, x: dagreNode.x, y: dagreNode.y });
+		newNodes.push({ ...node, x: dagreNode.x, y: dagreNode.y })
 	}
 
-	const newEdges: LogGraphEdge[] = [];
+	const newEdges: LogGraphEdge[] = []
 	for (const edge of edges) {
-		const dagreEdge = g.edge(edge.from, edge.to);
+		const dagreEdge = g.edge(edge.from, edge.to)
 		if (!dagreEdge) {
-			continue;
+			continue
 		}
-		newEdges.push({ ...edge });
+		newEdges.push({ ...edge })
 	}
 
 	return {
 		nodes: newNodes,
 		edges: newEdges
-	};
+	}
 }

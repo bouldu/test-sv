@@ -1,12 +1,12 @@
 <script lang="ts">
-	import Timeline from './Timeline.svelte';
+	import Timeline from './Timeline.svelte'
 	interface Props {
-		width: number;
-		height: number;
-		minDate: Date;
-		maxDate: Date;
-		currentDate: Date;
-		onUpdateIsPlaying: (playing: boolean) => void;
+		width: number
+		height: number
+		minDate: Date
+		maxDate: Date
+		currentDate: Date
+		onUpdateIsPlaying: (playing: boolean) => void
 	}
 
 	let {
@@ -17,61 +17,61 @@
 		currentDate = $bindable(new Date(minDate)),
 		onUpdateIsPlaying
 		// currentDate = $bindable(new Date(minDate))
-	}: Props = $props();
+	}: Props = $props()
 
-	let progress = $state(0);
-	let speedUnit = $state(1000 * 60 * 60 * 24); // 1 day per s
+	let progress = $state(0)
+	let speedUnit = $state(1000 * 60 * 60 * 24) // 1 day per s
 
 	$effect(() => {
 		currentDate = new Date(
 			minDate.getTime() + (progress / 100) * (maxDate.getTime() - minDate.getTime())
-		);
-	});
+		)
+	})
 
 	$effect(() => {
 		progress =
-			((currentDate.getTime() - minDate.getTime()) / (maxDate.getTime() - minDate.getTime())) * 100;
-	});
+			((currentDate.getTime() - minDate.getTime()) / (maxDate.getTime() - minDate.getTime())) * 100
+	})
 
 	const formatDate = (date: Date) =>
-		date.toLocaleDateString('fr-FR', { year: 'numeric', month: 'short', day: 'numeric' });
+		date.toLocaleDateString('fr-FR', { year: 'numeric', month: 'short', day: 'numeric' })
 
-	let isPlaying = $state(false);
-	let animationFrame: number;
-	let lastTimestamp: number | null = null;
+	let isPlaying = $state(false)
+	let animationFrame: number
+	let lastTimestamp: number | null = null
 
 	function play() {
-		isPlaying = true;
-		lastTimestamp = null; // Reset timestamp when starting
-		animationFrame = requestAnimationFrame(animate);
-		onUpdateIsPlaying(isPlaying);
+		isPlaying = true
+		lastTimestamp = null // Reset timestamp when starting
+		animationFrame = requestAnimationFrame(animate)
+		onUpdateIsPlaying(isPlaying)
 	}
 
 	function pause() {
-		isPlaying = false;
-		cancelAnimationFrame(animationFrame);
-		onUpdateIsPlaying(isPlaying);
+		isPlaying = false
+		cancelAnimationFrame(animationFrame)
+		onUpdateIsPlaying(isPlaying)
 	}
 
 	function reset() {
-		pause();
-		progress = 0;
+		pause()
+		progress = 0
 	}
 
 	function animate(timestamp: number) {
 		if (!isPlaying) {
-			return;
+			return
 		}
 
 		if (lastTimestamp !== null) {
-			const elapsed = timestamp - lastTimestamp;
+			const elapsed = timestamp - lastTimestamp
 			const progressIncrement =
-				(elapsed / 1000) * (speedUnit / (maxDate.getTime() - minDate.getTime())) * 100;
-			progress = Math.min(100, progress + progressIncrement);
+				(elapsed / 1000) * (speedUnit / (maxDate.getTime() - minDate.getTime())) * 100
+			progress = Math.min(100, progress + progressIncrement)
 		}
 
-		lastTimestamp = timestamp;
-		animationFrame = requestAnimationFrame(animate);
+		lastTimestamp = timestamp
+		animationFrame = requestAnimationFrame(animate)
 	}
 </script>
 

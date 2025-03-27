@@ -1,37 +1,37 @@
 <script lang="ts">
-	import LogUploader from '$lib/components/LogUploader.svelte';
-	import type { LogEntry } from '$lib/components/LogUploader';
-	import { convertLogEntriesToGraph } from '$lib/utils/LogUtils';
-	import type { LogEdge, LogNode, LogUnit } from '$lib/components/LogGraph';
-	import LogGraph from '$lib/components/LogGraph.svelte';
-	import LogTimeline from '$lib/components/LogTimeline.svelte';
+	import LogUploader from '$lib/components/LogUploader.svelte'
+	import type { LogEntry } from '$lib/components/LogUploader'
+	import { convertLogEntriesToGraph } from '$lib/utils/LogUtils'
+	import type { LogEdge, LogNode, LogUnit } from '$lib/components/LogGraph'
+	import LogGraph from '$lib/components/LogGraph.svelte'
+	import LogTimeline from '$lib/components/LogTimeline.svelte'
 
-	let nodes: LogNode[] = $state([]);
-	let edges: LogEdge[] = $state([]);
-	let units: LogUnit[] = $state([]);
+	let nodes: LogNode[] = $state([])
+	let edges: LogEdge[] = $state([])
+	let units: LogUnit[] = $state([])
 
-	let logs: LogEntry[] = [];
+	let logs: LogEntry[] = []
 
-	let minDate = $state(new Date('2025-01-01'));
-	let maxDate = $state(new Date('2025-12-31'));
+	let minDate = $state(new Date('2025-01-01'))
+	let maxDate = $state(new Date('2025-12-31'))
 
-	let currentDate = $state(new Date('2023-01-01'));
-	let isPlaying = $state(false);
+	let currentDate = $state(new Date('2023-01-01'))
+	let isPlaying = $state(false)
 	function onUpdateIsPlaying(playing: boolean) {
-		isPlaying = playing;
+		isPlaying = playing
 	}
 
 	function handleLogsUploaded(event: CustomEvent<LogEntry[]>) {
-		logs = event.detail;
+		logs = event.detail
 
-		const graph = convertLogEntriesToGraph(logs);
-		nodes = graph.nodes;
-		edges = graph.edges;
-		units = graph.units;
+		const graph = convertLogEntriesToGraph(logs)
+		nodes = graph.nodes
+		edges = graph.edges
+		units = graph.units
 
 		// units = units.filter((unit) => unit.id === '94');
-		minDate = graph.minDate;
-		maxDate = graph.maxDate;
+		minDate = graph.minDate
+		maxDate = graph.maxDate
 	}
 </script>
 
