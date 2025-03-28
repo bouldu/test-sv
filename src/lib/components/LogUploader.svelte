@@ -26,18 +26,18 @@
 			header: true,
 			complete: (results) => {
 				const logs: LogEntry[] = results.data.map((row: any) => ({
-					unitId: row.name,
-					eventId: row.event,
-					startDate: new Date(row.startDate)
+					unitId: row.unitName,
+					eventId: row.eventName,
+					startDate: new Date(row.eventStartDate)
 				}))
 
-				logs.sort((a, b) => {
-					if (a.unitId < b.unitId) return -1
-					if (a.unitId > b.unitId) return 1
-					if (a.startDate < b.startDate) return -1
-					if (a.startDate > b.startDate) return 1
-					return 0
-				})
+				// logs.sort((a, b) => {
+				// 	if (a.unitId < b.unitId) return -1
+				// 	if (a.unitId > b.unitId) return 1
+				// 	if (a.startDate < b.startDate) return -1
+				// 	if (a.startDate > b.startDate) return 1
+				// 	return 0
+				// })
 				dispatch('logsUploaded', logs)
 			},
 			error: (error: any) => {

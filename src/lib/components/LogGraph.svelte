@@ -54,10 +54,13 @@
 	$effect(() => {
 		console.log('isPlaying', isPlaying)
 		for (let anim of circleAnimations) {
-			if (isPlaying) {
-				anim.play()
-			} else {
+			if (!isPlaying) {
 				anim.pause()
+				continue
+			}
+
+			if (anim.data.visible) {
+				anim.play()
 			}
 		}
 	})
@@ -241,23 +244,60 @@
 		for (let edge of localEdges) {
 			const startNode = nodeById[edge.from]
 			const endNode = nodeById[edge.to]
-			const points = [
-				new THREE.Vector3(startNode.x, startNode.y, 0),
-				new THREE.Vector3(endNode.x, endNode.y, 0)
-			]
 
-			const geometry = new THREE.BufferGeometry().setFromPoints(points)
-			const material = new THREE.LineBasicMaterial({ color: 0xff0000 })
-			const line = new THREE.Line(geometry, material)
-			scene.add(line)
+			if (startNode.id === endNode.id) {
+				// Create a loop below the node
+				const loopRadius = 20
+				const loopSegments = 32
+				const loopGeometry = new THREE.CircleGeometry(loopRadius, loopSegments, 0, Math.PI * 2)
+				const loopPositions = loopGeometry.getAttribute('position')
+				const loopVertices = []
 
-			const curve = new THREE.CatmullRomCurve3(points, false)
-			edge.curve = curve
+				for (let i = 0; i < loopPositions.count; i++) {
+					loopVertices.push(
+						new THREE.Vector3(loopPositions.getX(i), loopPositions.getY(i), loopPositions.getZ(i))
+					)
+				}
+				loopVertices.shift() // Remove the center vertex
+
+				const loopMaterial = new THREE.LineBasicMaterial({ color: 0xff0000 })
+				const loop = new THREE.LineLoop(
+					new THREE.BufferGeometry().setFromPoints(loopVertices),
+					loopMaterial
+				)
+
+				loop.position.set(startNode.x, startNode.y - nodeHeight / 2 - loopRadius, 0)
+				scene.add(loop)
+
+				// Correctly create the curve for the loop
+				edge.curve = new THREE.CatmullRomCurve3(
+					loopVertices.map(
+						(v) =>
+							new THREE.Vector3(
+								v.x + startNode.x,
+								v.y + startNode.y - nodeHeight / 2 - loopRadius,
+								0
+							)
+					),
+					true // Ensure the curve is closed
+				)
+			} else {
+				const points = [
+					new THREE.Vector3(startNode.x, startNode.y, 0),
+					new THREE.Vector3(endNode.x, endNode.y, 0)
+				]
+
+				const geometry = new THREE.BufferGeometry().setFromPoints(points)
+				const material = new THREE.LineBasicMaterial({ color: 0xff0000 })
+				const line = new THREE.Line(geometry, material)
+				scene.add(line)
+
+				const curve = new THREE.CatmullRomCurve3(points, false)
+				edge.curve = curve
+			}
 		}
 
 		createCircles()
-
-		// console.log('drawGraph', localNodes.length, edges.length);
 	}
 
 	function animate() {
@@ -277,12 +317,14 @@
 			}
 			circle.visible = true
 
-			if (isPlaying) {
+			let circleAnimation = circleAnimations.find((anim) => anim.data === circle)
+			if (!circleAnimation) {
 				continue
 			}
 
-			let circleAnimation = circleAnimations.find((anim) => anim.data === circle)
-			if (!circleAnimation) {
+			// If the animation is already playing, the progress will be updated in the next frame
+			if (isPlaying && circleAnimation.paused()) {
+				circleAnimation.play()
 				continue
 			}
 
@@ -310,8 +352,6 @@
 				type: 'circle'
 			}
 
-			circle.userData
-
 			let anim = gsap.timeline({
 				repeat: 0,
 				paused: true,
@@ -320,7 +360,8 @@
 					circle.visible = false
 				}
 			})
-			for (let i = 0; i < unit.events.length - 2; i++) {
+
+			for (let i = 0; i < unit.events.length - 1; i++) {
 				let from = unit.events[i]
 				let to = unit.events[i + 1]
 
@@ -328,6 +369,7 @@
 				if (!edge?.curve) {
 					continue
 				}
+
 				if (i === 0) {
 					circle.position.copy(edge.curve.getPointAt(0))
 				}
@@ -335,12 +377,24 @@
 				let durationMs = to.startDate.getTime() - from.startDate.getTime()
 				let animDuration = durationMs / currentSpeed
 
-				anim.to(circle.position, {
+				let progress = { t: 0 } // Variable intermédiaire
+
+				anim.to(progress, {
 					duration: animDuration,
-					x: edge.curve.getPointAt(1).x,
-					y: edge.curve.getPointAt(1).y,
-					ease: 'linear'
+					t: 1, // Progression de 0 à 1 sur la courbe
+					ease: 'linear',
+					onUpdate: () => {
+						const newPos = edge.curve.getPointAt(progress.t)
+						circle.position.set(newPos.x, newPos.y, newPos.z)
+					}
 				})
+
+				// anim.to(circle.position, {
+				// 	duration: animDuration,
+				// 	x: edge.curve.getPointAt(1).x,
+				// 	y: edge.curve.getPointAt(1).y,
+				// 	ease: 'linear'
+				// })
 			}
 
 			circles.push(circle)
