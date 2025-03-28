@@ -1,4 +1,4 @@
-name,event,startDate,resource,duration,supplier,product,shipping_method,quantity,price,violation
+unitName,eventName,eventStartDate,resource,duration,supplier,product,shipping_method,quantity,price,violation
 1,Order received,2023-01-18 06:56:00,Warehouse C,27,Supplier Z,Product A,Standard,5,208.7,0
 1,Item shipped,2023-01-19 18:09:00,Warehouse B,23,Supplier X,Product C,Express,77,709.28,0
 1,Item picked,2023-01-30 06:28:00,Warehouse B,44,Supplier Y,Product C,Express,27,570.15,0
