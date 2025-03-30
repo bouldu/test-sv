@@ -245,6 +245,8 @@
 		const lineGeometry = new THREE.BufferGeometry()
 		const lineVertices: number[] = []
 
+		const loopBufferGeometry = new THREE.BufferGeometry()
+
 		for (let edge of localEdges) {
 			const startNode = nodeById[edge.from]
 			const endNode = nodeById[edge.to]
@@ -273,10 +275,9 @@
 				}
 				loopVertices.shift() // Remove the center vertex
 
-				const loopMaterial = new THREE.LineBasicMaterial({ color: 0xff0000 })
 				const loop = new THREE.LineLoop(
-					new THREE.BufferGeometry().setFromPoints(loopVertices),
-					loopMaterial
+					loopBufferGeometry.setFromPoints(loopVertices),
+					lineMaterial
 				)
 
 				loop.position.set(startNode.x, startNode.y - nodeHeight / 2 - loopRadius, 0)
