@@ -310,7 +310,7 @@
 		requestAnimationFrame(animate)
 		renderer.render(scene, camera)
 		labelRenderer.render(scene, camera)
-		// console.log('infos', renderer.info.render)
+		console.log('infos', renderer.info.render)
 	}
 
 	function refreshCircles() {
@@ -344,15 +344,15 @@
 
 	function createCircles() {
 		circleAnimations = []
+		const circleGeometry = new THREE.CircleGeometry(10, 32)
+		const circleMaterial = new THREE.MeshBasicMaterial({ color: 0x0000ff })
+
 		for (let unit of units) {
 			if (unit.events.length < 2) {
 				continue
 			}
 
-			let circle = new THREE.Mesh(
-				new THREE.CircleGeometry(10, 32),
-				new THREE.MeshBasicMaterial({ color: 0x0000ff })
-			)
+			let circle = new THREE.Mesh(circleGeometry, circleMaterial)
 			circle.name = unit.id
 			circle.userData = {
 				...unit,
