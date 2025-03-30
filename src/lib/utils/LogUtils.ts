@@ -9,7 +9,7 @@ export function convertLogEntriesToGraph(logs: LogEntry[]): {
 	maxDate: Date
 } {
 	const nodesMap: Map<string, LogNode> = new Map()
-	const edges: LogEdge[] = []
+	const edgesMap: Map<string, LogEdge> = new Map()
 	const units: LogUnit[] = []
 	const minDate = new Date(logs[0].startDate)
 	const maxDate = new Date(logs[0].startDate)
@@ -56,8 +56,18 @@ export function convertLogEntriesToGraph(logs: LogEntry[]): {
 		}
 
 		const previousNodeId = previousLog.eventId
-		edges.push({ from: previousNodeId, to: currentNodeId })
+		const edgeId = `${previousNodeId}|${currentNodeId}`
+		if (!edgesMap.has(edgeId)) {
+			const edge = { from: previousNodeId, to: currentNodeId }
+			edgesMap.set(edgeId, edge)
+		}
 	}
 
-	return { nodes: Array.from(nodesMap.values()), edges, units, minDate, maxDate }
+	return {
+		nodes: Array.from(nodesMap.values()),
+		edges: Array.from(edgesMap.values()),
+		units,
+		minDate,
+		maxDate
+	}
 }
