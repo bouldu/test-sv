@@ -229,10 +229,9 @@
 		if (!localNodes.length) {
 			return
 		}
-
+		const geometry = new THREE.BoxGeometry(nodeWidth, nodeHeight, 0)
+		const material = new THREE.MeshBasicMaterial({ color: 0x00ff00 })
 		for (const node of localNodes) {
-			const geometry = new THREE.BoxGeometry(nodeWidth, nodeHeight, 0)
-			const material = new THREE.MeshBasicMaterial({ color: 0x00ff00 })
 			const rectangle = new THREE.Mesh(geometry, material)
 
 			rectangle.position.set(node.x, node.y, 0)
@@ -241,11 +240,25 @@
 			addNodeLabel(rectangle, node.id)
 		}
 
+		// Combine all edges into a single geometry
+		const lineMaterial = new THREE.LineBasicMaterial({ color: 0xff0000 })
+		const lineGeometry = new THREE.BufferGeometry()
+		const lineVertices: number[] = []
+
 		for (let edge of localEdges) {
 			const startNode = nodeById[edge.from]
 			const endNode = nodeById[edge.to]
 
-			if (startNode.id === endNode.id) {
+			if (startNode.id !== endNode.id) {
+				lineVertices.push(startNode.x, startNode.y, 0, endNode.x, endNode.y, 0)
+
+				const points = [
+					new THREE.Vector3(startNode.x, startNode.y, 0),
+					new THREE.Vector3(endNode.x, endNode.y, 0)
+				]
+				const curve = new THREE.CatmullRomCurve3(points, false)
+				edge.curve = curve
+			} else {
 				// Create a loop below the node
 				const loopRadius = 20
 				const loopSegments = 32
@@ -281,21 +294,13 @@
 					),
 					true // Ensure the curve is closed
 				)
-			} else {
-				const points = [
-					new THREE.Vector3(startNode.x, startNode.y, 0),
-					new THREE.Vector3(endNode.x, endNode.y, 0)
-				]
-
-				const geometry = new THREE.BufferGeometry().setFromPoints(points)
-				const material = new THREE.LineBasicMaterial({ color: 0xff0000 })
-				const line = new THREE.Line(geometry, material)
-				scene.add(line)
-
-				const curve = new THREE.CatmullRomCurve3(points, false)
-				edge.curve = curve
 			}
 		}
+
+		lineGeometry.setAttribute('position', new THREE.Float32BufferAttribute(lineVertices, 3))
+
+		const combinedLine = new THREE.Line(lineGeometry, lineMaterial)
+		scene.add(combinedLine)
 
 		createCircles()
 	}
@@ -304,6 +309,7 @@
 		requestAnimationFrame(animate)
 		renderer.render(scene, camera)
 		labelRenderer.render(scene, camera)
+		// console.log('infos', renderer.info.render)
 	}
 
 	function refreshCircles() {
