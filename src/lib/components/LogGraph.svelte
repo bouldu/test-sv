@@ -6,7 +6,7 @@
 	import type { GUI } from 'dat.gui'
 	import { createDagreeGraphLayout } from '$lib/utils/GraphLayout'
 	import gsap from 'gsap'
-
+	import Stats from 'three/examples/jsm/libs/stats.module.js'
 	interface Props {
 		nodes: LogNode[]
 		edges: LogEdge[]
@@ -72,6 +72,7 @@
 	let controls: MapControls
 	let labelRenderer: CSS2DRenderer
 	let Gui: GUI
+	let stats: Stats
 	let circles: THREE.Mesh[] = []
 
 	let circleAnimations: gsap.core.Timeline[] = []
@@ -131,11 +132,16 @@
 			document.body.removeChild(labelRenderer.domElement)
 		}
 		Gui?.destroy()
+		if (stats?.dom) {
+			document.body.removeChild(stats.dom)
+		}
 	})
 
 	const init = async () => {
 		// Scène
 		scene = new THREE.Scene()
+		stats = new Stats()
+		document.body.appendChild(stats.dom)
 
 		// Caméra
 		// camera = new THREE.PerspectiveCamera(50, window.innerWidth / window.innerHeight, 0.1, 2000);
@@ -310,6 +316,7 @@
 		requestAnimationFrame(animate)
 		renderer.render(scene, camera)
 		labelRenderer.render(scene, camera)
+		stats.update()
 		console.log('infos', renderer.info.render)
 	}
 
@@ -343,6 +350,7 @@
 	}
 
 	function createCircles() {
+		circles = []
 		circleAnimations = []
 		const circleGeometry = new THREE.CircleGeometry(10, 32)
 		const circleMaterial = new THREE.MeshBasicMaterial({ color: 0x0000ff })
