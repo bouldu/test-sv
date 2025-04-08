@@ -2,7 +2,13 @@
 	import * as THREE from 'three'
 	import { onDestroy, onMount } from 'svelte'
 	import { CSS2DObject, CSS2DRenderer, MapControls } from 'three/examples/jsm/Addons.js'
-	import type { LogEdge, LogGraphNode, LogNode, LogUnit } from '$lib/components/LogGraph'
+	import type {
+		LogEdge,
+		LogEdgeUnit,
+		LogGraphNode,
+		LogNode,
+		LogUnit
+	} from '$lib/components/LogGraph'
 	import type { GUI } from 'dat.gui'
 	import { createDagreeGraphLayout } from '$lib/utils/GraphLayout'
 	import gsap from 'gsap'
@@ -53,13 +59,14 @@
 
 	$effect(() => {
 		console.log('isPlaying', isPlaying)
-		for (let anim of circleAnimations) {
+		for (let bundle of circleBundles) {
+			const anim = bundle.timeline
 			if (!isPlaying) {
 				anim.pause()
 				continue
 			}
 
-			if (anim.data.visible) {
+			if (bundle.visible) {
 				anim.play()
 			}
 		}
@@ -74,8 +81,17 @@
 	let Gui: GUI
 	let stats: Stats
 	let circles: THREE.Mesh[] = []
+	let circlesMesh: THREE.InstancedMesh
 
 	let circleAnimations: gsap.core.Timeline[] = []
+
+	interface CircleBundle {
+		unit: LogUnit
+		timeline: gsap.core.Timeline
+		index: number
+		visible: boolean
+	}
+	let circleBundles: CircleBundle[] = []
 
 	let raycaster = new THREE.Raycaster()
 	let mouse = new THREE.Vector2()
@@ -317,64 +333,124 @@
 		renderer.render(scene, camera)
 		labelRenderer.render(scene, camera)
 		stats.update()
-		console.log('infos', renderer.info.render)
 	}
 
 	function refreshCircles() {
-		for (let circle of circles) {
-			const minDate = circle.userData.events[0].startDate
-			const maxDate = circle.userData.events[circle.userData.events.length - 1].startDate
+		for (let circle of circleBundles) {
+			const minDate = circle.unit.events[0].startDate
+			const maxDate = circle.unit.events[circle.unit.events.length - 1].startDate
 
 			if (minDate > currentDate || maxDate < currentDate) {
+				hideCircle(circle.index)
 				circle.visible = false
 				continue
 			}
 			circle.visible = true
 
-			let circleAnimation = circleAnimations.find((anim) => anim.data === circle)
-			if (!circleAnimation) {
+			let circleTimeline = circle.timeline
+			if (!circleTimeline) {
 				continue
 			}
 
 			// If the animation is already playing, the progress will be updated in the next frame
-			if (isPlaying && circleAnimation.paused()) {
-				circleAnimation.play()
+			if (isPlaying && circleTimeline.paused()) {
+				circleTimeline.play()
 				continue
 			}
 
 			const progress =
 				(currentDate.getTime() - minDate.getTime()) / (maxDate.getTime() - minDate.getTime())
 
-			circleAnimation.progress(progress)
+			setCirclePosition(circle, progress)
 		}
+	}
+
+	function findCurrentEdgeUnit(unit: LogUnit): LogEdgeUnit | undefined {
+		for (let i = 0; i < unit.events.length; i++) {
+			if (i === unit.events.length - 1) {
+				return undefined
+			}
+			const unitEvent = unit.events[i]
+			const nextUnitEvent = unit.events[i + 1]
+			if (unitEvent.startDate < currentDate && nextUnitEvent.startDate > currentDate) {
+				return {
+					from: unitEvent,
+					to: nextUnitEvent
+				}
+			}
+		}
+		return undefined
+	}
+
+	function setCirclePosition(circleBundle: CircleBundle, progress: number) {
+		const circleIndex = circleBundle.index
+		const unit = circleBundle.unit
+
+		// find the edge that contains the current date
+		const edgeUnit = findCurrentEdgeUnit(unit)
+		if (!edgeUnit) {
+			hideCircle(circleIndex)
+			return
+		}
+		const edge = localEdges.find(
+			(edge) => edge.from === edgeUnit.from.id && edge.to === edgeUnit.to.id
+		)
+		if (!edge?.curve) {
+			hideCircle(circleIndex)
+			return
+		}
+		const pos = edge.curve.getPointAt(progress)
+		const dummy = new THREE.Object3D()
+		dummy.position.set(pos.x, pos.y, pos.z)
+		dummy.updateMatrix()
+		circlesMesh.setMatrixAt(circleIndex, dummy.matrix)
+	}
+
+	function hideCircle(circleIndex: number) {
+		const dummy = new THREE.Object3D()
+		dummy.position.set(9999, 9999, 9999) // Déplacement hors champ
+		dummy.updateMatrix()
+		circlesMesh.setMatrixAt(circleIndex, dummy.matrix)
+		circlesMesh.instanceMatrix.needsUpdate = true
 	}
 
 	function createCircles() {
 		circles = []
 		circleAnimations = []
+		circleBundles = []
+
+		const filteredUnits = units.filter((unit) => unit.events.length >= 2)
+		const instanceCount = filteredUnits.length
+
+		if (instanceCount === 0) {
+			return
+		}
+
 		const circleGeometry = new THREE.CircleGeometry(10, 32)
 		const circleMaterial = new THREE.MeshBasicMaterial({ color: 0x0000ff })
 
-		for (let unit of units) {
-			if (unit.events.length < 2) {
-				continue
-			}
+		circlesMesh = new THREE.InstancedMesh(circleGeometry, circleMaterial, instanceCount)
+		scene.add(circlesMesh)
 
-			let circle = new THREE.Mesh(circleGeometry, circleMaterial)
-			circle.name = unit.id
-			circle.userData = {
-				...unit,
-				type: 'circle'
-			}
+		for (let i = 0; i < filteredUnits.length - 1; i++) {
+			const unit = filteredUnits[i]
 
-			let anim = gsap.timeline({
+			const timeline = gsap.timeline({
 				repeat: 0,
 				paused: true,
-				data: circle,
 				onComplete: () => {
-					circle.visible = false
+					circleBundles[i].visible = false
 				}
 			})
+
+			const circleBundle = {
+				unit,
+				timeline,
+				index: i,
+				visible: true
+			}
+			circleBundles.push(circleBundle)
+			circleAnimations.push(timeline)
 
 			for (let i = 0; i < unit.events.length - 1; i++) {
 				let from = unit.events[i]
@@ -385,36 +461,20 @@
 					continue
 				}
 
-				if (i === 0) {
-					circle.position.copy(edge.curve.getPointAt(0))
-				}
-
 				let durationMs = to.startDate.getTime() - from.startDate.getTime()
 				let animDuration = durationMs / currentSpeed
 
 				let progress = { t: 0 } // Variable intermédiaire
 
-				anim.to(progress, {
+				timeline.to(progress, {
 					duration: animDuration,
 					t: 1, // Progression de 0 à 1 sur la courbe
 					ease: 'linear',
 					onUpdate: () => {
-						const newPos = edge.curve.getPointAt(progress.t)
-						circle.position.set(newPos.x, newPos.y, newPos.z)
+						setCirclePosition(circleBundle, progress.t)
 					}
 				})
-
-				// anim.to(circle.position, {
-				// 	duration: animDuration,
-				// 	x: edge.curve.getPointAt(1).x,
-				// 	y: edge.curve.getPointAt(1).y,
-				// 	ease: 'linear'
-				// })
 			}
-
-			circles.push(circle)
-			circleAnimations.push(anim)
-			scene.add(circle)
 		}
 	}
 </script>
